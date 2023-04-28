@@ -112,11 +112,11 @@ int main(int argc, char *argv[]){
     /* recieve message */
     if(XSTRCMP(argv[1], "-r")==0){
 
-        /* set reciever's pubkey */
+        /* set sender's pubkey */
         if((ephemeralPubKeySz = readPubKey(ephemeralPubKey)) == -1){
             ret = 1;
             goto exit;
-        }
+        }        
 
         /* set cipher text */
         if(readCipherText(cipherText) != 0){
