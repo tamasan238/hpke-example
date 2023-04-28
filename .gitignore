@@ -1,0 +1,7 @@
+*.pub
+*.dat
+
+.vscode
+
+send
+recieve
