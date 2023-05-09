@@ -8,30 +8,37 @@
 make
 ```
 
-1. Make reciever's public key.
+1. Start the recieving program.
 
 ```sh
-./recieve -k
+./recieve
+Enter the message name you want to receive: 
 ```
 
-`reciever.pub` will generate.
+`reciever.pub` will generate.  
+Then, it enters the standard input waiting state.
 
 
-2. Send a message.
+2. Send a message in another terminal.
 
 ```sh
-./send
+./send outMsg < inMsg.txt
 ```
 
-`ephemeral.pub` and `cipher_text.dat` will generate.
+Replace `inMsg.txt` with the text file path you want to send.  
+`outMsg` is the message name. You can replace it with any string.
 
-3. recieve a message.
+`outMsg.pub`(ephemeral public key) and `outMsg.enc`(cipher text) will generate.  
+
+
+3. Enter the message name for the receiving program.
 
 ```sh
-./recieve -r
+./recieve
+Enter the message name you want to receive: outMsg
 ```
 
-Now, maybe occur Segmentation fault (core dumped).
+Then plain text is displayed.
 
 4. reset
 
