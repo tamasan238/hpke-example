@@ -8,17 +8,15 @@
 #define KDF     HKDF_SHA256
 #define AEAD    HPKE_AES_256_GCM
 
-#define EPHEMERAL_PUBKEY    "ephemeral.pub"
 #define RECIEVER_PUBKEY     "reciever.pub"
-#define CIPHER_TEXT         "cipher_text.dat"
 
-int writePubKey(uint8_t key[], word16 keySz){
+int writePubKey(char filename[], uint8_t key[], word16 keySz){
     FILE*   fp;
     int     ret = 0;
 
-    if((fp = fopen(EPHEMERAL_PUBKEY, "wb")) == NULL || 
+    if((fp = fopen(filename, "wb")) == NULL || 
         fwrite(key, 1, keySz, fp) != keySz){
-        fprintf(stderr, "Failed to write %s\n", EPHEMERAL_PUBKEY);
+        fprintf(stderr, "Failed to write %s\n", filename);
         ret =  1;
     }
 
@@ -27,13 +25,13 @@ int writePubKey(uint8_t key[], word16 keySz){
     return ret;
 }
 
-int writeCipherText(char cipherText[]){
+int writeCipherText(char filename[], char cipherText[]){
     FILE*   fp;
     int     ret = 0;
 
-    if((fp = fopen(CIPHER_TEXT, "wb")) == NULL || 
+    if((fp = fopen(filename, "wb")) == NULL || 
         fwrite(cipherText, 1, HPKE_Npk_MAX, fp) != HPKE_Npk_MAX){
-        fprintf(stderr, "Failed to write %s\n", CIPHER_TEXT);
+        fprintf(stderr, "Failed to write %s\n", filename);
         ret =  1;
     }
 
@@ -80,15 +78,17 @@ int main(int argc, char *argv[]){
     word16  ephemeralPubKeySz = sizeof(ephemeralPubKey);
     word16  recieverPubKeySz;
 
+    char    id_ephemeralKey[MAX_HPKE_LABEL_SZ];
+    char    id_cipherText[MAX_HPKE_LABEL_SZ];
     const char* plainText = "This is a secret message.";
     const char* infoText= "info";   /* optional */
     const char* aadText = "aad";    /* optional */
-    char cipherText[MAX_HPKE_LABEL_SZ];
+    char    cipherText[MAX_HPKE_LABEL_SZ];
 
     /* print usage */
-    if(argc!=1){
+    if(argc!=2){
         printf("usage:\n"
-            "./send\n");
+            "./send [message name]\n");
         return 0;
     }
 
@@ -96,12 +96,16 @@ int main(int argc, char *argv[]){
     wc_HpkeInit(hpke, KEM, KDF, AEAD, NULL);
     rngRet = wc_InitRng(rng);
 
+    XSTRLCPY(id_ephemeralKey, argv[1], MAX_HPKE_LABEL_SZ);
+    XSTRLCAT(id_ephemeralKey, ".pub", MAX_HPKE_LABEL_SZ);
+    XSTRLCPY(id_cipherText, argv[1], MAX_HPKE_LABEL_SZ);
+    XSTRLCAT(id_cipherText, ".enc", MAX_HPKE_LABEL_SZ);
+
     /* set reciever's pubkey*/
     if((recieverPubKeySz = readPubKey(recieverPubKey)) == -1){
         ret = 1;
         goto exit;
     }
-    
     wc_HpkeDeserializePublicKey(hpke, &recieverKey,
         recieverPubKey, recieverPubKeySz);
 
@@ -109,7 +113,7 @@ int main(int argc, char *argv[]){
     wc_HpkeGenerateKeyPair(hpke, &ephemeralKey, rng);
     wc_HpkeSerializePublicKey(hpke, ephemeralKey, 
         ephemeralPubKey, &ephemeralPubKeySz);
-    if(writePubKey(ephemeralPubKey, ephemeralPubKeySz) != 0){
+    if(writePubKey(id_ephemeralKey, ephemeralPubKey, ephemeralPubKeySz) != 0){
         ret = 1;
         goto exit;
     }
@@ -120,7 +124,7 @@ int main(int argc, char *argv[]){
         (byte*)aadText, XSTRLEN(aadText),
         (byte*)plainText, XSTRLEN(plainText),
         (byte*)cipherText);
-    if(writeCipherText(cipherText) != 0){
+    if(writeCipherText(id_cipherText, cipherText) != 0){
         ret = 1;
         goto exit;
     }

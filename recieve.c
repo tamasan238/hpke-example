@@ -8,9 +8,7 @@
 #define KDF     HKDF_SHA256
 #define AEAD    HPKE_AES_256_GCM
 
-#define EPHEMERAL_PUBKEY    "ephemeral.pub"
 #define RECIEVER_PUBKEY     "reciever.pub"
-#define CIPHER_TEXT         "cipher_text.dat"
 
 int writePubKey(uint8_t key[], word16 keySz){
     FILE* fp;
@@ -27,21 +25,21 @@ int writePubKey(uint8_t key[], word16 keySz){
     return ret;
 }
 
-int readPubKey(unsigned char *buff){
+int readPubKey(char filename[], unsigned char *buff){
     FILE*   fp;
     word64  sz;
     int     ret = -1;
 
-    if((fp = fopen(EPHEMERAL_PUBKEY, "rb")) == NULL ||
+    if((fp = fopen(filename, "rb")) == NULL ||
     fseek(fp, 0, SEEK_END) != 0 || (sz = ftell(fp)) == -1){
-        fprintf(stderr, "Failed to seek %s\n", EPHEMERAL_PUBKEY);
+        fprintf(stderr, "Failed to seek %s\n", filename);
         goto cleanup;
     }
 
     rewind(fp);
     if((buff = (unsigned char*)malloc(sz)) ==NULL ||
     fread(buff, 1, sz, fp) != sz){
-        fprintf(stderr, "Failed to read %s\n", EPHEMERAL_PUBKEY);
+        fprintf(stderr, "Failed to read %s\n", filename);
         goto cleanup;
     }
     
@@ -53,14 +51,14 @@ cleanup:
     return ret;
 }
 
-int readCipherText(char *buff){
+int readCipherText(char filename[], char *buff){
     FILE*   fp;
     int     ret = 0;
 
-    if((fp = fopen(CIPHER_TEXT, "rb")) == NULL ||
+    if((fp = fopen(filename, "rb")) == NULL ||
     (buff = (char*)malloc(HPKE_Npk_MAX)) == NULL ||
     fread(buff, 1, HPKE_Npk_MAX, fp) != HPKE_Npk_MAX){
-        fprintf(stderr, "Failed to read %s\n", CIPHER_TEXT);
+        fprintf(stderr, "Failed to read %s\n", filename);
         ret = 1;
     }
 
@@ -81,16 +79,18 @@ int main(int argc, char *argv[]){
     word16  ephemeralPubKeySz = sizeof(ephemeralPubKey);
     word16  recieverPubKeySz = sizeof(recieverPubKey);
 
+    char    id[MAX_HPKE_LABEL_SZ];
+    char    id_ephemeralKey[MAX_HPKE_LABEL_SZ];
+    char    id_cipherText[MAX_HPKE_LABEL_SZ];
     char*   plainText = NULL;
     char*   infoText = NULL;    /* optional */
     char*   aadText = "aad";    /* optional */
     char    cipherText[MAX_HPKE_LABEL_SZ];
 
     /* print usage */
-    if(argc!=2){
+    if(argc!=1){
         printf("usage:\n"
-            "to generate keys:     ./recieve -k\n"
-            "to recieve a message: ./recieve -r\n");
+            "./recieve\n");
         return 0;
     }
 
@@ -99,45 +99,46 @@ int main(int argc, char *argv[]){
     rngRet = wc_InitRng(rng);
 
     /* generate keypair */
-    if(XSTRCMP(argv[1], "-k")==0){
-        wc_HpkeGenerateKeyPair(hpke, &recieverKey, rng);
-        wc_HpkeSerializePublicKey(hpke, recieverKey, 
-            recieverPubKey, &recieverPubKeySz);
-        if(writePubKey(recieverPubKey, recieverPubKeySz) != 0){
-            ret = 1;
-            goto exit;
-        }
+    wc_HpkeGenerateKeyPair(hpke, &recieverKey, rng);
+    wc_HpkeSerializePublicKey(hpke, recieverKey, 
+        recieverPubKey, &recieverPubKeySz);
+    if(writePubKey(recieverPubKey, recieverPubKeySz) != 0){
+        ret = 1;
+        goto exit;
     }
 
-    /* recieve message */
-    if(XSTRCMP(argv[1], "-r")==0){
+    /* wait to input id */
+    printf("Enter the message name you want to receive: ");
+    scanf("%s", id);
 
-        /* set sender's pubkey */
-        if((ephemeralPubKeySz = readPubKey(ephemeralPubKey)) == -1){
-            ret = 1;
-            goto exit;
-        }        
+    XSTRLCPY(id_ephemeralKey, id, MAX_HPKE_LABEL_SZ);
+    XSTRLCAT(id_ephemeralKey, ".pub", MAX_HPKE_LABEL_SZ);
+    XSTRLCPY(id_cipherText, id, MAX_HPKE_LABEL_SZ);
+    XSTRLCAT(id_cipherText, ".enc", MAX_HPKE_LABEL_SZ);
 
-        /* set cipher text */
-        if(readCipherText(cipherText) != 0){
-            ret = 1;
-            goto exit;
-        }
-
-        /* open */
-        wc_HpkeOpenBase(hpke, recieverKey,
-            ephemeralPubKey, ephemeralPubKeySz,
-            (byte*)infoText, XSTRLEN(infoText),
-            (byte*)aadText, XSTRLEN(aadText),
-            (byte*)cipherText, XSTRLEN(plainText),
-            (byte*)plainText);
-
-        // todo: wc_HpkeOpenBase()実行時に発生するコアダンプの解消
-        //      recieverKeyに秘密鍵が入っていないことによるものか...？
-        //      exportもできないので，方針自体変えるべきか．
-
-        // todo: plainTextの出力
+    /* set sender's pubkey */
+    if((ephemeralPubKeySz = readPubKey(id_ephemeralKey, ephemeralPubKey)) == -1){
+        ret = 1;
+        goto exit;
     }
+    wc_HpkeDeserializePublicKey(hpke, &ephemeralKey,
+        ephemeralPubKey, ephemeralPubKeySz);
+
+    /* set cipher text */
+    if(readCipherText(id_cipherText, cipherText) != 0){
+        ret = 1;
+        goto exit;
+    }
+
+    /* open */
+    wc_HpkeOpenBase(hpke, recieverKey,
+        ephemeralPubKey, ephemeralPubKeySz,
+        (byte*)infoText, XSTRLEN(infoText),
+        (byte*)aadText, XSTRLEN(aadText),
+        (byte*)cipherText, XSTRLEN(plainText),
+        (byte*)plainText);
+
+    printf("%s\n", plainText);
 
 exit:
     /* finalize */

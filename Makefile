@@ -27,4 +27,4 @@ all: $(TARGETS)
 clean:
 	rm -f $(TARGETS)
 	rm -f *.pub
-	rm -f *.dat
+	rm -f *.enc

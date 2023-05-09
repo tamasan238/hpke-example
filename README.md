@@ -22,10 +22,9 @@ Then, it enters the standard input waiting state.
 2. Send a message in another terminal.
 
 ```sh
-./send outMsg < inMsg.txt
+./send outMsg
 ```
 
-Replace `inMsg.txt` with the text file path you want to send.  
 `outMsg` is the message name. You can replace it with any string.
 
 `outMsg.pub`(ephemeral public key) and `outMsg.enc`(cipher text) will generate.  
