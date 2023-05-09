@@ -8,14 +8,14 @@
 make
 ```
 
-1. Start the recieving program.
+1. Start the receiving program.
 
 ```sh
-./recieve
+./receive
 Enter the message name you want to receive: 
 ```
 
-`reciever.pub` will generate.  
+`receiver.pub` will generate.  
 Then, it enters the standard input waiting state.
 
 
@@ -33,7 +33,7 @@ Then, it enters the standard input waiting state.
 3. Enter the message name for the receiving program.
 
 ```sh
-./recieve
+./receive
 Enter the message name you want to receive: outMsg
 ```
 
