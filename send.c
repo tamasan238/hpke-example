@@ -8,7 +8,7 @@
 #define KDF     HKDF_SHA256
 #define AEAD    HPKE_AES_256_GCM
 
-#define RECIEVER_PUBKEY     "reciever.pub"
+#define receiver_PUBKEY     "receiver.pub"
 
 int writePubKey(char filename[], uint8_t key[], word16 keySz){
     FILE*   fp;
@@ -45,16 +45,16 @@ int readPubKey(unsigned char *buff){
     word64  sz;
     int     ret = -1;
 
-    if((fp = fopen(RECIEVER_PUBKEY, "rb")) == NULL ||
+    if((fp = fopen(receiver_PUBKEY, "rb")) == NULL ||
     fseek(fp, 0, SEEK_END) != 0 || (sz = ftell(fp)) == -1){
-        fprintf(stderr, "Failed to seek %s\n", RECIEVER_PUBKEY);
+        fprintf(stderr, "Failed to seek %s\n", receiver_PUBKEY);
         goto cleanup;
     }
 
     rewind(fp);
     if((buff = (unsigned char*)malloc(sz)) ==NULL ||
     fread(buff, 1, sz, fp) != sz){
-        fprintf(stderr, "Failed to read %s\n", RECIEVER_PUBKEY);
+        fprintf(stderr, "Failed to read %s\n", receiver_PUBKEY);
         goto cleanup;
     }
     
@@ -72,11 +72,11 @@ int main(int argc, char *argv[]){
     Hpke    hpke[1];
     WC_RNG  rng[1];
     void*   ephemeralKey;
-    void*   recieverKey;
+    void*   receiverKey;
     uint8_t ephemeralPubKey[HPKE_Npk_MAX];
-    uint8_t recieverPubKey[HPKE_Npk_MAX];
+    uint8_t receiverPubKey[HPKE_Npk_MAX];
     word16  ephemeralPubKeySz = sizeof(ephemeralPubKey);
-    word16  recieverPubKeySz;
+    word16  receiverPubKeySz;
 
     char    id_ephemeralKey[MAX_HPKE_LABEL_SZ];
     char    id_cipherText[MAX_HPKE_LABEL_SZ];
@@ -101,13 +101,13 @@ int main(int argc, char *argv[]){
     XSTRLCPY(id_cipherText, argv[1], MAX_HPKE_LABEL_SZ);
     XSTRLCAT(id_cipherText, ".enc", MAX_HPKE_LABEL_SZ);
 
-    /* set reciever's pubkey*/
-    if((recieverPubKeySz = readPubKey(recieverPubKey)) == -1){
+    /* set receiver's pubkey*/
+    if((receiverPubKeySz = readPubKey(receiverPubKey)) == -1){
         ret = 1;
         goto exit;
     }
-    wc_HpkeDeserializePublicKey(hpke, &recieverKey,
-        recieverPubKey, recieverPubKeySz);
+    wc_HpkeDeserializePublicKey(hpke, &receiverKey,
+        receiverPubKey, receiverPubKeySz);
 
     /* generate keypair */
     wc_HpkeGenerateKeyPair(hpke, &ephemeralKey, rng);
@@ -119,7 +119,7 @@ int main(int argc, char *argv[]){
     }
 
     /* seal */
-    wc_HpkeSealBase(hpke, ephemeralKey, recieverKey,
+    wc_HpkeSealBase(hpke, ephemeralKey, receiverKey,
         (byte*)infoText, XSTRLEN(infoText),
         (byte*)aadText, XSTRLEN(aadText),
         (byte*)plainText, XSTRLEN(plainText),
@@ -128,6 +128,7 @@ int main(int argc, char *argv[]){
         ret = 1;
         goto exit;
     }
+
 
 exit:
     /* finalize */

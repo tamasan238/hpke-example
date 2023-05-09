@@ -8,15 +8,15 @@
 #define KDF     HKDF_SHA256
 #define AEAD    HPKE_AES_256_GCM
 
-#define RECIEVER_PUBKEY     "reciever.pub"
+#define receiver_PUBKEY     "receiver.pub"
 
 int writePubKey(uint8_t key[], word16 keySz){
     FILE* fp;
     int ret = 0;
 
-    if((fp = fopen(RECIEVER_PUBKEY, "wb")) == NULL ||
+    if((fp = fopen(receiver_PUBKEY, "wb")) == NULL ||
     fwrite(key, 1, keySz, fp) != keySz){
-        fprintf(stderr, "Failed to write %s\n", RECIEVER_PUBKEY);
+        fprintf(stderr, "Failed to write %s\n", receiver_PUBKEY);
         ret =  1;
     }
 
@@ -73,18 +73,18 @@ int main(int argc, char *argv[]){
     Hpke    hpke[1];
     WC_RNG  rng[1];
     void*   ephemeralKey = NULL;
-    void*   recieverKey;
+    void*   receiverKey;
     uint8_t ephemeralPubKey[HPKE_Npk_MAX];
-    uint8_t recieverPubKey[HPKE_Npk_MAX];
+    uint8_t receiverPubKey[HPKE_Npk_MAX];
     word16  ephemeralPubKeySz = sizeof(ephemeralPubKey);
-    word16  recieverPubKeySz = sizeof(recieverPubKey);
+    word16  receiverPubKeySz = sizeof(receiverPubKey);
 
     char    id[MAX_HPKE_LABEL_SZ];
     char    id_ephemeralKey[MAX_HPKE_LABEL_SZ];
     char    id_cipherText[MAX_HPKE_LABEL_SZ];
-    char*   plainText = NULL;
-    char*   infoText = NULL;    /* optional */
-    char*   aadText = "aad";    /* optional */
+    char*   plainText = "";
+    char*   infoText = "info";    /* optional */
+    char*   aadText  = "aad";    /* optional */
     char    cipherText[MAX_HPKE_LABEL_SZ];
 
     /* print usage */
@@ -99,10 +99,10 @@ int main(int argc, char *argv[]){
     rngRet = wc_InitRng(rng);
 
     /* generate keypair */
-    wc_HpkeGenerateKeyPair(hpke, &recieverKey, rng);
-    wc_HpkeSerializePublicKey(hpke, recieverKey, 
-        recieverPubKey, &recieverPubKeySz);
-    if(writePubKey(recieverPubKey, recieverPubKeySz) != 0){
+    wc_HpkeGenerateKeyPair(hpke, &receiverKey, rng);
+    wc_HpkeSerializePublicKey(hpke, receiverKey, 
+        receiverPubKey, &receiverPubKeySz);
+    if(writePubKey(receiverPubKey, receiverPubKeySz) != 0){
         ret = 1;
         goto exit;
     }
@@ -131,12 +131,16 @@ int main(int argc, char *argv[]){
     }
 
     /* open */
-    wc_HpkeOpenBase(hpke, recieverKey,
+    if(wc_HpkeOpenBase(hpke, receiverKey,
         ephemeralPubKey, ephemeralPubKeySz,
         (byte*)infoText, XSTRLEN(infoText),
         (byte*)aadText, XSTRLEN(aadText),
-        (byte*)cipherText, XSTRLEN(plainText),
-        (byte*)plainText);
+        (byte*)cipherText, XSTRLEN(cipherText),
+        (byte*)plainText) != 0){
+            printf("err\n");
+            ret = 1;
+            goto exit;
+        }
 
     printf("%s\n", plainText);
 
