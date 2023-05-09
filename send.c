@@ -8,7 +8,7 @@
 #define KDF     HKDF_SHA256
 #define AEAD    HPKE_AES_256_GCM
 
-#define receiver_PUBKEY     "receiver.pub"
+#define RECEIVER_PUBKEY     "receiver.pub"
 
 int writePubKey(char filename[], uint8_t key[], word16 keySz){
     FILE*   fp;
@@ -45,16 +45,16 @@ int readPubKey(unsigned char *buff){
     word64  sz;
     int     ret = -1;
 
-    if((fp = fopen(receiver_PUBKEY, "rb")) == NULL ||
+    if((fp = fopen(RECEIVER_PUBKEY, "rb")) == NULL ||
     fseek(fp, 0, SEEK_END) != 0 || (sz = ftell(fp)) == -1){
-        fprintf(stderr, "Failed to seek %s\n", receiver_PUBKEY);
+        fprintf(stderr, "Failed to seek %s\n", RECEIVER_PUBKEY);
         goto cleanup;
     }
 
     rewind(fp);
     if((buff = (unsigned char*)malloc(sz)) ==NULL ||
     fread(buff, 1, sz, fp) != sz){
-        fprintf(stderr, "Failed to read %s\n", receiver_PUBKEY);
+        fprintf(stderr, "Failed to read %s\n", RECEIVER_PUBKEY);
         goto cleanup;
     }
     

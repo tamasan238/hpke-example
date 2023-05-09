@@ -8,15 +8,15 @@
 #define KDF     HKDF_SHA256
 #define AEAD    HPKE_AES_256_GCM
 
-#define receiver_PUBKEY     "receiver.pub"
+#define RECEIVER_PUBKEY     "receiver.pub"
 
 int writePubKey(uint8_t key[], word16 keySz){
     FILE* fp;
     int ret = 0;
 
-    if((fp = fopen(receiver_PUBKEY, "wb")) == NULL ||
+    if((fp = fopen(RECEIVER_PUBKEY, "wb")) == NULL ||
     fwrite(key, 1, keySz, fp) != keySz){
-        fprintf(stderr, "Failed to write %s\n", receiver_PUBKEY);
+        fprintf(stderr, "Failed to write %s\n", RECEIVER_PUBKEY);
         ret =  1;
     }
 
