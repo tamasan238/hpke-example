@@ -73,7 +73,7 @@ int main(int argc, char *argv[]){
     Hpke    hpke[1];
     WC_RNG  rng[1];
     void*   ephemeralKey = NULL;
-    void*   receiverKey;
+    void*   receiverKey = NULL;
     uint8_t ephemeralPubKey[HPKE_Npk_MAX];
     uint8_t receiverPubKey[HPKE_Npk_MAX];
     word16  ephemeralPubKeySz = sizeof(ephemeralPubKey);
@@ -82,7 +82,7 @@ int main(int argc, char *argv[]){
     char    id[MAX_HPKE_LABEL_SZ];
     char    id_ephemeralKey[MAX_HPKE_LABEL_SZ];
     char    id_cipherText[MAX_HPKE_LABEL_SZ];
-    const char* startText = "This is a test.";
+    // const char* startText = "This is a test.";
     const char* infoText= "info";   /* optional */
     const char* aadText = "aad";    /* optional */
     byte    plainText[MAX_HPKE_LABEL_SZ];
@@ -118,7 +118,7 @@ int main(int argc, char *argv[]){
     XSTRLCAT(id_cipherText, ".enc", MAX_HPKE_LABEL_SZ);
 
     /* set sender's pubkey */
-    if(ephemeralPubKeySz = readPubKey(id_ephemeralKey, ephemeralPubKey) == 1){
+    if((ephemeralPubKeySz = readPubKey(id_ephemeralKey, ephemeralPubKey)) == 1){
         ret = 1;
         goto exit;
     }
@@ -134,7 +134,7 @@ int main(int argc, char *argv[]){
         ephemeralPubKey, ephemeralPubKeySz,
         (byte*)infoText, (word32)XSTRLEN(infoText),
         (byte*)aadText, (word32)XSTRLEN(aadText),
-        cipherText, (word32)XSTRLEN(startText),
+        cipherText, MAX_HPKE_LABEL_SZ,
         plainText) != 0){
             printf("err\n");
             ret = 1;
