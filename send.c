@@ -25,12 +25,12 @@ int writePubKey(char filename[], uint8_t key[], word16 keySz){
     return ret;
 }
 
-int writeCipherText(char filename[], char cipherText[]){
+int writeCipherText(char filename[], byte cipherText[]){
     FILE*   fp;
     int     ret = 0;
 
     if((fp = fopen(filename, "wb")) == NULL || 
-        fwrite(cipherText, 1, HPKE_Npk_MAX, fp) != HPKE_Npk_MAX){
+        fwrite(cipherText, 1, MAX_HPKE_LABEL_SZ, fp) != MAX_HPKE_LABEL_SZ){
         fprintf(stderr, "Failed to write %s\n", filename);
         ret =  1;
     }
@@ -71,8 +71,8 @@ int main(int argc, char *argv[]){
     int     rngRet = 0;
     Hpke    hpke[1];
     WC_RNG  rng[1];
-    void*   ephemeralKey;
-    void*   receiverKey;
+    void*   ephemeralKey = NULL;
+    void*   receiverKey = NULL;
     uint8_t ephemeralPubKey[HPKE_Npk_MAX];
     uint8_t receiverPubKey[HPKE_Npk_MAX];
     word16  ephemeralPubKeySz = sizeof(ephemeralPubKey);
@@ -80,10 +80,11 @@ int main(int argc, char *argv[]){
 
     char    id_ephemeralKey[MAX_HPKE_LABEL_SZ];
     char    id_cipherText[MAX_HPKE_LABEL_SZ];
-    const char* plainText = "This is a secret message.";
+    const char* startText = "This is a test.";
     const char* infoText= "info";   /* optional */
     const char* aadText = "aad";    /* optional */
-    char    cipherText[MAX_HPKE_LABEL_SZ];
+    // byte    plainText[MAX_HPKE_LABEL_SZ];
+    byte    cipherText[MAX_HPKE_LABEL_SZ];
 
     /* print usage */
     if(argc!=2){
@@ -113,22 +114,23 @@ int main(int argc, char *argv[]){
     wc_HpkeGenerateKeyPair(hpke, &ephemeralKey, rng);
     wc_HpkeSerializePublicKey(hpke, ephemeralKey, 
         ephemeralPubKey, &ephemeralPubKeySz);
-    if(writePubKey(id_ephemeralKey, ephemeralPubKey, ephemeralPubKeySz) != 0){
-        ret = 1;
-        goto exit;
-    }
 
     /* seal */
     wc_HpkeSealBase(hpke, ephemeralKey, receiverKey,
-        (byte*)infoText, XSTRLEN(infoText),
-        (byte*)aadText, XSTRLEN(aadText),
-        (byte*)plainText, XSTRLEN(plainText),
-        (byte*)cipherText);
+        (byte*)infoText, (word32)XSTRLEN(infoText),
+        (byte*)aadText, (word32)XSTRLEN(aadText),
+        (byte*)startText, (word32)XSTRLEN(startText),
+        cipherText);
     if(writeCipherText(id_cipherText, cipherText) != 0){
         ret = 1;
         goto exit;
     }
+    
 
+    if(writePubKey(id_ephemeralKey, ephemeralPubKey, ephemeralPubKeySz) != 0){
+        ret = 1;
+        goto exit;
+    }
 
 exit:
     /* finalize */

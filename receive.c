@@ -51,13 +51,13 @@ cleanup:
     return ret;
 }
 
-int readCipherText(char filename[], char *buff){
+int readCipherText(char filename[], byte *buff){
     FILE*   fp;
     int     ret = 0;
 
     if((fp = fopen(filename, "rb")) == NULL ||
-    (buff = (char*)malloc(HPKE_Npk_MAX)) == NULL ||
-    fread(buff, 1, HPKE_Npk_MAX, fp) != HPKE_Npk_MAX){
+    (buff = (byte*)malloc(MAX_HPKE_LABEL_SZ)) == NULL ||
+    fread(buff, 1, MAX_HPKE_LABEL_SZ, fp) != MAX_HPKE_LABEL_SZ){
         fprintf(stderr, "Failed to read %s\n", filename);
         ret = 1;
     }
@@ -82,10 +82,11 @@ int main(int argc, char *argv[]){
     char    id[MAX_HPKE_LABEL_SZ];
     char    id_ephemeralKey[MAX_HPKE_LABEL_SZ];
     char    id_cipherText[MAX_HPKE_LABEL_SZ];
-    char*   plainText = "";
-    char*   infoText = "info";    /* optional */
-    char*   aadText  = "aad";    /* optional */
-    char    cipherText[MAX_HPKE_LABEL_SZ];
+    const char* startText = "This is a test.";
+    const char* infoText= "info";   /* optional */
+    const char* aadText = "aad";    /* optional */
+    byte    plainText[MAX_HPKE_LABEL_SZ];
+    byte    cipherText[MAX_HPKE_LABEL_SZ];
 
     /* print usage */
     if(argc!=1){
@@ -117,12 +118,10 @@ int main(int argc, char *argv[]){
     XSTRLCAT(id_cipherText, ".enc", MAX_HPKE_LABEL_SZ);
 
     /* set sender's pubkey */
-    if((ephemeralPubKeySz = readPubKey(id_ephemeralKey, ephemeralPubKey)) == -1){
+    if(ephemeralPubKeySz = readPubKey(id_ephemeralKey, ephemeralPubKey) == 1){
         ret = 1;
         goto exit;
     }
-    wc_HpkeDeserializePublicKey(hpke, &ephemeralKey,
-        ephemeralPubKey, ephemeralPubKeySz);
 
     /* set cipher text */
     if(readCipherText(id_cipherText, cipherText) != 0){
@@ -133,14 +132,14 @@ int main(int argc, char *argv[]){
     /* open */
     if(wc_HpkeOpenBase(hpke, receiverKey,
         ephemeralPubKey, ephemeralPubKeySz,
-        (byte*)infoText, XSTRLEN(infoText),
-        (byte*)aadText, XSTRLEN(aadText),
-        (byte*)cipherText, XSTRLEN(cipherText),
-        (byte*)plainText) != 0){
+        (byte*)infoText, (word32)XSTRLEN(infoText),
+        (byte*)aadText, (word32)XSTRLEN(aadText),
+        cipherText, (word32)XSTRLEN(startText),
+        plainText) != 0){
             printf("err\n");
             ret = 1;
             goto exit;
-        }
+    }
 
     printf("%s\n", plainText);
 
