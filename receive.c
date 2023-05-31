@@ -28,7 +28,7 @@ int writePubKey(uint8_t key[], word16 keySz){
 int readPubKey(char filename[], unsigned char *buff){
     FILE*   fp;
     word64  sz;
-    int     ret = -1;
+    int     ret = 1;
 
     if((fp = fopen(filename, "rb")) == NULL ||
     fseek(fp, 0, SEEK_END) != 0 || (sz = ftell(fp)) == -1){

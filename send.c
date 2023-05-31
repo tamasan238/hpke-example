@@ -43,7 +43,7 @@ int writeCipherText(char filename[], byte cipherText[]){
 int readPubKey(unsigned char *buff){
     FILE*   fp;
     word64  sz;
-    int     ret = -1;
+    int     ret = 1;
 
     if((fp = fopen(RECEIVER_PUBKEY, "rb")) == NULL ||
     fseek(fp, 0, SEEK_END) != 0 || (sz = ftell(fp)) == -1){
@@ -103,7 +103,7 @@ int main(int argc, char *argv[]){
     XSTRLCAT(id_cipherText, ".enc", MAX_HPKE_LABEL_SZ);
 
     /* set receiver's pubkey*/
-    if((receiverPubKeySz = readPubKey(receiverPubKey)) == -1){
+    if((receiverPubKeySz = readPubKey(receiverPubKey)) == 1){
         ret = 1;
         goto exit;
     }
