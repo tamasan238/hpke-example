@@ -1,12 +1,12 @@
 # HPKE Examples Makefile
 CC       = gcc
-LIB_PATH = /usr/local
-CFLAGS   = -Wall -I$(LIB_PATH)/include
-LIBS     = -L$(LIB_PATH)/lib -lm
+LIB_PATH = /Users/masaki/wolf/wolfssl
+CFLAGS   = -Wall -I$(LIB_PATH)/include -include $(LIB_PATH)/wolfssl/options.h
+LIBS     = -L$(LIB_PATH)/src/.libs
 
 # option variables
 DYN_LIB         = -lwolfssl
-STATIC_LIB      = $(LIB_PATH)/lib/libwolfssl.a
+STATIC_LIB      = $(LIB_PATH)/src/.libs/libwolfssl.a
 DEBUG_FLAGS     = -g -DDEBUG
 DEBUG_INC_PATHS = -MD
 OPTIMIZE        = -Os
@@ -22,7 +22,7 @@ all: $(TARGETS)
 
 # build template
 %: %.c
-	$(CC) -o $@ $< $(CFLAGS) $(LIBS)
+	$(CC) -o $@ $< $(CFLAGS) $(STATIC_LIB) -g -lm
 
 clean:
 	rm -f $(TARGETS)
