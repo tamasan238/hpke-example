@@ -1,143 +1,91 @@
 #include <stdio.h>
 #include <stdint.h>
+#include <stdbool.h>
+#include <stdlib.h>
+#include <string.h>
+#include <fcntl.h>
+#include <unistd.h>
 #include <wolfssl/options.h>
 #include <wolfssl/wolfcrypt/settings.h>
 #include <wolfssl/wolfcrypt/hpke.h>
 
-#define KEM     DHKEM_X25519_HKDF_SHA256
-#define KDF     HKDF_SHA256
-#define AEAD    HPKE_AES_256_GCM
+#define PIPE_toReceiver "tmp/toReceiver"
+#define PIPE_toSender "tmp/toSender"
 
-#define RECEIVER_PUBKEY     "receiver.pub"
+int main()
+{
+	int ret = 0;
+	int rngRet = 0;
+	int fd;
+	Hpke hpke[1];
+	WC_RNG rng[1];
+	const char* start_text = "this is a test";
+	const char* info_text = "info";
+	const char* aad_text = "aad";
+	byte ciphertext[MAX_HPKE_LABEL_SZ];
+	// byte plaintext[MAX_HPKE_LABEL_SZ];
+	word16* receiverKey = NULL;
+	word16* ephemeralKey = NULL;
+	uint8_t pubKey[HPKE_Npk_MAX]; /* public key */
+	// word16 pubKeySz = (word16)sizeof(pubKey);
+	word16 pubKeySz = 32; //CURVE25519_KEYSIZEと一致していないと弾かれる
 
-int writePubKey(char filename[], uint8_t key[], word16 keySz){
-    FILE*   fp;
-    int     ret = 0;
+	ret = wc_HpkeInit(hpke, DHKEM_X25519_HKDF_SHA256, HKDF_SHA256,
+    	HPKE_AES_128_GCM, NULL); /* or HPKE_AES_256_GCM */
 
-    if((fp = fopen(filename, "wb")) == NULL || 
-        fwrite(key, 1, keySz, fp) != keySz){
-        fprintf(stderr, "Failed to write %s\n", filename);
-        ret =  1;
-    }
+	if (ret != 0)
+    	return ret;
 
-    if(fp!=NULL)
-        fclose(fp);
-    return ret;
-}
+	rngRet = ret = wc_InitRng(rng);
 
-int writeCipherText(char filename[], byte cipherText[]){
-    FILE*   fp;
-    int     ret = 0;
+	if (ret != 0)
+    	return ret;
 
-    if((fp = fopen(filename, "wb")) == NULL || 
-        fwrite(cipherText, 1, MAX_HPKE_LABEL_SZ, fp) != MAX_HPKE_LABEL_SZ){
-        fprintf(stderr, "Failed to write %s\n", filename);
-        ret =  1;
-    }
+	/* generate the keys */
+	if (ret == 0){
+    	ret = wc_HpkeGenerateKeyPair(hpke, (void **)&ephemeralKey, rng);
+		ret = wc_HpkeGenerateKeyPair(hpke, (void **)&receiverKey, rng);
+	}
 
-    if(fp!=NULL)
-        fclose(fp);
-    return ret;
-}
+	/* recieve reciever's pubkey*/
+	if (ret == 0){
+		if ((fd = open (PIPE_toSender, O_RDONLY)) == -1)
+			return fd;
+		while(true)
+			if(read(fd, pubKey, pubKeySz)!=0)
+				break;
+		close(fd);
+		ret = wc_HpkeDeserializePublicKey(hpke, (void **)receiverKey, pubKey, pubKeySz);
+	}
 
-int readPubKey(unsigned char *buff){
-    FILE*   fp;
-    word64  sz;
-    int     ret = 1;
+	/* seal */
+	if (ret == 0)
+    	ret = wc_HpkeSealBase(hpke, ephemeralKey, receiverKey,
+        	(byte*)info_text, (word32)XSTRLEN(info_text),
+        	(byte*)aad_text, (word32)XSTRLEN(aad_text),
+        	(byte*)start_text, (word32)XSTRLEN(start_text),
+        	ciphertext);
 
-    if((fp = fopen(RECEIVER_PUBKEY, "rb")) == NULL ||
-    fseek(fp, 0, SEEK_END) != 0 || (sz = ftell(fp)) == -1){
-        fprintf(stderr, "Failed to seek %s\n", RECEIVER_PUBKEY);
-        goto cleanup;
-    }
+	/* export ephemeral key */
+	 if (ret == 0)
+    	ret = wc_HpkeSerializePublicKey(hpke, ephemeralKey, pubKey, &pubKeySz);
+	
+	/* send ephemeral key and message*/
+	if (ret == 0){
+		fd = open (PIPE_toReceiver, O_WRONLY);
+		if (fd == -1)
+			return fd;
+		write(fd, pubKey, pubKeySz);
+		write(fd, ciphertext, sizeof(ciphertext));
+		close(fd);
+	}
 
-    rewind(fp);
-    if((buff = (unsigned char*)malloc(sz)) ==NULL ||
-    fread(buff, 1, sz, fp) != sz){
-        fprintf(stderr, "Failed to read %s\n", RECEIVER_PUBKEY);
-        goto cleanup;
-    }
-    
-    ret = sz;
+	if (ephemeralKey != NULL)
+    	wc_HpkeFreeKey(hpke, DHKEM_X25519_HKDF_SHA256, ephemeralKey, NULL);
 
-cleanup:
-    if(fp!=NULL)
-        fclose(fp);
-    return ret;
-}
+	if (rngRet == 0)
+    	wc_FreeRng(rng);
 
-int main(int argc, char *argv[]){
-    int     ret = 0;
-    int     rngRet = 0;
-    Hpke    hpke[1];
-    WC_RNG  rng[1];
-    void*   ephemeralKey = NULL;
-    void*   receiverKey = NULL;
-    uint8_t ephemeralPubKey[HPKE_Npk_MAX];
-    uint8_t receiverPubKey[HPKE_Npk_MAX];
-    word16  ephemeralPubKeySz = sizeof(ephemeralPubKey);
-    word16  receiverPubKeySz;
-
-    char    id_ephemeralKey[MAX_HPKE_LABEL_SZ];
-    char    id_cipherText[MAX_HPKE_LABEL_SZ];
-    const char* startText = "This is a test.";
-    const char* infoText= "info";   /* optional */
-    const char* aadText = "aad";    /* optional */
-    // byte    plainText[MAX_HPKE_LABEL_SZ];
-    byte    cipherText[MAX_HPKE_LABEL_SZ];
-
-    /* print usage */
-    if(argc!=2){
-        printf("usage:\n"
-            "./send [message name]\n");
-        return 0;
-    }
-
-    /* initialize */
-    wc_HpkeInit(hpke, KEM, KDF, AEAD, NULL);
-    rngRet = wc_InitRng(rng);
-
-    XSTRLCPY(id_ephemeralKey, argv[1], MAX_HPKE_LABEL_SZ);
-    XSTRLCAT(id_ephemeralKey, ".pub", MAX_HPKE_LABEL_SZ);
-    XSTRLCPY(id_cipherText, argv[1], MAX_HPKE_LABEL_SZ);
-    XSTRLCAT(id_cipherText, ".enc", MAX_HPKE_LABEL_SZ);
-
-    /* set receiver's pubkey*/
-    if((receiverPubKeySz = readPubKey(receiverPubKey)) == 1){
-        ret = 1;
-        goto exit;
-    }
-    wc_HpkeDeserializePublicKey(hpke, &receiverKey,
-        receiverPubKey, receiverPubKeySz);
-
-    /* generate keypair */
-    wc_HpkeGenerateKeyPair(hpke, &ephemeralKey, rng);
-    wc_HpkeSerializePublicKey(hpke, ephemeralKey, 
-        ephemeralPubKey, &ephemeralPubKeySz);
-
-    /* seal */
-    wc_HpkeSealBase(hpke, ephemeralKey, receiverKey,
-        (byte*)infoText, (word32)XSTRLEN(infoText),
-        (byte*)aadText, (word32)XSTRLEN(aadText),
-        (byte*)startText, (word32)XSTRLEN(startText),
-        cipherText);
-    if(writeCipherText(id_cipherText, cipherText) != 0){
-        ret = 1;
-        goto exit;
-    }
-    
-
-    if(writePubKey(id_ephemeralKey, ephemeralPubKey, ephemeralPubKeySz) != 0){
-        ret = 1;
-        goto exit;
-    }
-
-exit:
-    /* finalize */
-    if(ephemeralKey != NULL)
-        wc_HpkeFreeKey(hpke, hpke->kem, ephemeralKey, NULL);
-    if(rngRet == 0)
-        wc_FreeRng(rng);
-
-    return ret;
+	if (ret == 0)
+  		printf("SUCCESS");
 }

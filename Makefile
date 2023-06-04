@@ -1,6 +1,6 @@
 # HPKE Examples Makefile
 CC       = gcc
-LIB_PATH = /Users/masaki/wolf/wolfssl
+LIB_PATH = /home/iwai/wolf/wolfssl
 CFLAGS   = -Wall -I$(LIB_PATH)/include -include $(LIB_PATH)/wolfssl/options.h
 LIBS     = -L$(LIB_PATH)/src/.libs
 
@@ -19,6 +19,10 @@ SRC=$(wildcard *.c)
 TARGETS=$(patsubst %.c, %, $(SRC))
 
 all: $(TARGETS)
+	rm -rf tmp
+	mkdir tmp
+	touch tmp/toSender
+	touch tmp/toReceiver
 
 # build template
 %: %.c
@@ -28,3 +32,4 @@ clean:
 	rm -f $(TARGETS)
 	rm -f *.pub
 	rm -f *.enc
+	rm -rf tmp

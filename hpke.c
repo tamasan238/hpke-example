@@ -47,7 +47,7 @@ int main()
 	printf("%d\n", ret);
 	/* seal */
 	if (ret == 0)
-    	ret = wc_HpkeSealBase(&hpke[SND], &ephemeralKey, &receiverKey,
+    	ret = wc_HpkeSealBase(&hpke[SND], ephemeralKey, receiverKey,
         	(byte*)info_text, (word32)XSTRLEN(info_text),
         	(byte*)aad_text, (word32)XSTRLEN(aad_text),
         	(byte*)start_text, (word32)XSTRLEN(start_text),
@@ -56,12 +56,12 @@ int main()
 	printf("%d\n", ret);
 
 	/* export ephemeral key */
-	// if (ret == 0)
-    // 	ret = wc_HpkeSerializePublicKey(hpke, ephemeralKey, pubKey, &pubKeySz);
+	 if (ret == 0)
+    	ret = wc_HpkeSerializePublicKey(&hpke[SND], ephemeralKey, pubKey, &pubKeySz);
 
 	/* open with exported ephemeral key */
 	if (ret == 0)
-    	ret = wc_HpkeOpenBase(&hpke[RCV], &receiverKey, pubKey, pubKeySz,
+    	ret = wc_HpkeOpenBase(&hpke[RCV], receiverKey, pubKey, pubKeySz,
         	(byte*)info_text, (word32)XSTRLEN(info_text),
         	(byte*)aad_text, (word32)XSTRLEN(aad_text),
         	ciphertext, (word32)XSTRLEN(start_text),
