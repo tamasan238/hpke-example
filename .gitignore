@@ -2,6 +2,7 @@
 *.enc
 
 .vscode
+*.dSYM
 
 send
 receive
