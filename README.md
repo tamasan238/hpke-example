@@ -8,6 +8,34 @@
 make
 ```
 
+1. Start the sending program.
+
+```sh
+./send
+```
+
+2. Start the receiving program in another terminal.
+
+```sh
+./receive
+```
+
+Then plain text is displayed.
+
+3. reset
+
+```sh
+make clean
+```
+
+## How to Use (Old)
+
+0. Build
+
+```sh
+make
+```
+
 1. Start the receiving program.
 
 ```sh
