@@ -19,7 +19,7 @@ int main()
 	int fd;
 	Hpke hpke[1];
 	WC_RNG rng[1];
-	const char* start_text = "this is a test";
+	const char* plaintext = "this is a test";
 	const char* info_text = "info";
 	const char* aad_text = "aad";
 	byte ciphertext[MAX_HPKE_LABEL_SZ];
@@ -59,7 +59,7 @@ int main()
     	ret = wc_HpkeSealBase(hpke, ephemeralKey, receiverKey,
         	(byte*)info_text, (word32)XSTRLEN(info_text),
         	(byte*)aad_text, (word32)XSTRLEN(aad_text),
-        	(byte*)start_text, (word32)XSTRLEN(start_text),
+        	(byte*)plaintext, (word32)XSTRLEN(plaintext),
         	ciphertext);
 
 	/* export ephemeral key */
