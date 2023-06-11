@@ -1,7 +1,7 @@
 # HPKE Examples Makefile
 CC       = gcc
-LIB_PATH = /home/iwai/wolf/wolfssl
-CFLAGS   = -Wall -I$(LIB_PATH)/include -include $(LIB_PATH)/wolfssl/options.h
+LIB_PATH = /Users/masaki/wolf/wolfssl
+CFLAGS   = -Wall -I$(LIB_PATH)/include -include $(LIB_PATH)/wolfssl/options.h -framework CoreFoundation -framework Security
 LIBS     = -L$(LIB_PATH)/src/.libs
 
 # option variables

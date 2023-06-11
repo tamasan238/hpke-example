@@ -23,15 +23,13 @@ int main()
 	const char* info_text = "info";
 	const char* aad_text = "aad";
 	byte ciphertext[MAX_HPKE_LABEL_SZ];
-	// byte plaintext[MAX_HPKE_LABEL_SZ];
 	word16* receiverKey = NULL;
 	word16* ephemeralKey = NULL;
-	uint8_t pubKey[HPKE_Npk_MAX]; /* public key */
-	// word16 pubKeySz = (word16)sizeof(pubKey);
-	word16 pubKeySz = 32; //CURVE25519_KEYSIZEと一致していないと弾かれる
+	uint8_t pubKey[HPKE_Npk_MAX];
+	word16 pubKeySz = 32; //CURVE25519_KEYSIZE
 
 	ret = wc_HpkeInit(hpke, DHKEM_X25519_HKDF_SHA256, HKDF_SHA256,
-    	HPKE_AES_128_GCM, NULL); /* or HPKE_AES_256_GCM */
+    	HPKE_AES_256_GCM, NULL);
 
 	if (ret != 0)
     	return ret;
@@ -42,10 +40,8 @@ int main()
     	return ret;
 
 	/* generate the keys */
-	if (ret == 0){
+	if (ret == 0)
     	ret = wc_HpkeGenerateKeyPair(hpke, (void **)&ephemeralKey, rng);
-		ret = wc_HpkeGenerateKeyPair(hpke, (void **)&receiverKey, rng);
-	}
 
 	/* recieve reciever's pubkey*/
 	if (ret == 0){
@@ -55,7 +51,7 @@ int main()
 			if(read(fd, pubKey, pubKeySz)!=0)
 				break;
 		close(fd);
-		ret = wc_HpkeDeserializePublicKey(hpke, (void **)receiverKey, pubKey, pubKeySz);
+		ret = wc_HpkeDeserializePublicKey(hpke, (void **)&receiverKey, pubKey, pubKeySz);
 	}
 
 	/* seal */

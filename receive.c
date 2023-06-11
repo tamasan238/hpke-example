@@ -25,13 +25,11 @@ int main()
 	byte ciphertext[MAX_HPKE_LABEL_SZ];
 	byte plaintext[MAX_HPKE_LABEL_SZ];
 	word16* receiverKey = NULL;
-	// word16* ephemeralKey = NULL;
-	uint8_t pubKey[HPKE_Npk_MAX]; /* public key */
-	// word16 pubKeySz = (word16)sizeof(pubKey);
-	word16 pubKeySz = 32;
+	uint8_t pubKey[HPKE_Npk_MAX];
+	word16 pubKeySz = (word16)sizeof(pubKey);
 
 	ret = wc_HpkeInit(hpke, DHKEM_X25519_HKDF_SHA256, HKDF_SHA256,
-    	HPKE_AES_128_GCM, NULL); /* or HPKE_AES_256_GCM */
+    	HPKE_AES_256_GCM, NULL);
 
 	if (ret != 0)
     	return ret;
@@ -78,7 +76,7 @@ int main()
         	ciphertext, (word32)XSTRLEN(start_text),
         	plaintext);
 	
-	printf("%s¥n", plaintext);
+	printf("%s\n", plaintext);
 
 	if (ret == 0)
     	ret = XMEMCMP(plaintext, start_text, XSTRLEN(start_text));
