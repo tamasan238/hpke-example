@@ -23,6 +23,7 @@ int main()
 	const char* aad_text = "aad";
 	byte ciphertext[MAX_HPKE_LABEL_SZ];
 	byte plaintext[MAX_HPKE_LABEL_SZ];
+	word32 plaintextSz = 0;
 	word16* receiverKey = NULL;
 	uint8_t pubKey[HPKE_Npk_MAX];
 	word16 pubKeySz = (word16)sizeof(pubKey);
@@ -59,11 +60,15 @@ int main()
 	if (ret == 0){
 		if ((fd = open (PIPE_toReceiver, O_RDONLY)) == -1)
 			return fd;
-		while(true)
-			if(read(fd, pubKey, pubKeySz)!=0){
-				read(fd, ciphertext, sizeof(ciphertext));
-				break;
-			}
+		read(fd, pubKey, pubKeySz);
+		read(fd, ciphertext, sizeof(ciphertext));
+		read(fd, &plaintextSz, sizeof(plaintextSz));
+		// while(true)
+		// 	if(read(fd, pubKey, pubKeySz)!=0){
+		// 		read(fd, ciphertext, sizeof(ciphertext));
+		// 		read(fd, &plaintextSz, sizeof(plaintextSz));
+		// 		break;
+		// 	}
 		close(fd);
 	}
 
@@ -72,8 +77,7 @@ int main()
     	ret = wc_HpkeOpenBase(hpke, receiverKey, pubKey, pubKeySz,
         	(byte*)info_text, (word32)XSTRLEN(info_text),
         	(byte*)aad_text, (word32)XSTRLEN(aad_text),
-        	ciphertext, (word32)XSTRLEN("this is a test"), //ここどうにかしないと
-        	plaintext);
+			ciphertext, (word32)plaintextSz, plaintext);
 	
 	printf("%s\n", plaintext);
 

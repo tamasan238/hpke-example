@@ -21,8 +21,8 @@ TARGETS=$(patsubst %.c, %, $(SRC))
 all: $(TARGETS)
 	rm -rf tmp
 	mkdir tmp
-	touch tmp/toSender
-	touch tmp/toReceiver
+	mkfifo tmp/toSender
+	mkfifo tmp/toReceiver
 
 # build template
 %: %.c

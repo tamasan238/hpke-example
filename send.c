@@ -23,6 +23,7 @@ int main()
 	const char* info_text = "info";
 	const char* aad_text = "aad";
 	byte ciphertext[MAX_HPKE_LABEL_SZ];
+	word32 plaintextSz = XSTRLEN(plaintext);
 	word16* receiverKey = NULL;
 	word16* ephemeralKey = NULL;
 	uint8_t pubKey[HPKE_Npk_MAX];
@@ -47,9 +48,10 @@ int main()
 	if (ret == 0){
 		if ((fd = open (PIPE_toSender, O_RDONLY)) == -1)
 			return fd;
-		while(true)
-			if(read(fd, pubKey, pubKeySz)!=0)
-				break;
+		// while(true)
+		// 	if(read(fd, pubKey, pubKeySz)!=0)
+		// 		break;
+		read(fd, pubKey, pubKeySz);
 		close(fd);
 		ret = wc_HpkeDeserializePublicKey(hpke, (void **)&receiverKey, pubKey, pubKeySz);
 	}
@@ -59,7 +61,7 @@ int main()
     	ret = wc_HpkeSealBase(hpke, ephemeralKey, receiverKey,
         	(byte*)info_text, (word32)XSTRLEN(info_text),
         	(byte*)aad_text, (word32)XSTRLEN(aad_text),
-        	(byte*)plaintext, (word32)XSTRLEN(plaintext),
+        	(byte*)plaintext, plaintextSz,
         	ciphertext);
 
 	/* export ephemeral key */
@@ -73,6 +75,7 @@ int main()
 			return fd;
 		write(fd, pubKey, pubKeySz);
 		write(fd, ciphertext, sizeof(ciphertext));
+		write(fd, &plaintextSz, sizeof(plaintextSz));
 		close(fd);
 	}
 
