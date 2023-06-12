@@ -63,12 +63,6 @@ int main()
 		read(fd, pubKey, pubKeySz);
 		read(fd, ciphertext, sizeof(ciphertext));
 		read(fd, &plaintextSz, sizeof(plaintextSz));
-		// while(true)
-		// 	if(read(fd, pubKey, pubKeySz)!=0){
-		// 		read(fd, ciphertext, sizeof(ciphertext));
-		// 		read(fd, &plaintextSz, sizeof(plaintextSz));
-		// 		break;
-		// 	}
 		close(fd);
 	}
 

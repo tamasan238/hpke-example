@@ -48,9 +48,6 @@ int main()
 	if (ret == 0){
 		if ((fd = open (PIPE_toSender, O_RDONLY)) == -1)
 			return fd;
-		// while(true)
-		// 	if(read(fd, pubKey, pubKeySz)!=0)
-		// 		break;
 		read(fd, pubKey, pubKeySz);
 		close(fd);
 		ret = wc_HpkeDeserializePublicKey(hpke, (void **)&receiverKey, pubKey, pubKeySz);
