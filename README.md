@@ -14,6 +14,8 @@ make
 ./send
 ```
 
+Enter your message.
+
 2. Start the receiving program in another terminal.
 
 ```sh
