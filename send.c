@@ -1,13 +1,4 @@
-#include <stdio.h>
-#include <stdint.h>
-#include <fcntl.h>
-#include <unistd.h>
-#include <wolfssl/options.h>
-#include <wolfssl/wolfcrypt/settings.h>
-#include <wolfssl/wolfcrypt/hpke.h>
-
-#define PIPE_toReceiver "tmp/toReceiver"
-#define PIPE_toSender "tmp/toSender"
+#include "common.h"
 
 int main()
 {
@@ -16,69 +7,76 @@ int main()
 	int fd;
 	Hpke hpke[1];
 	WC_RNG rng[1];
-	const char* plaintext = "this is a test";
-	const char* info_text = "info";
-	const char* aad_text = "aad";
+	const char *info_text = INFO_TXT;
+	const char *aad_text = AAD_TXT;
 	byte ciphertext[MAX_HPKE_LABEL_SZ];
-	word32 plaintextSz = XSTRLEN(plaintext);
-	word16* receiverKey = NULL;
-	word16* ephemeralKey = NULL;
+	char plaintext[MAX_HPKE_LABEL_SZ];
+	word32 plaintextSz;
+
+	word16 *receiverKey = NULL;
+	word16 *ephemeralKey = NULL;
 	uint8_t pubKey[HPKE_Npk_MAX];
-	word16 pubKeySz = 32; //CURVE25519_KEYSIZE
+	word16 pubKeySz = 0;
 
-	ret = wc_HpkeInit(hpke, DHKEM_X25519_HKDF_SHA256, HKDF_SHA256,
-    	HPKE_AES_256_GCM, NULL);
+	ret = wc_HpkeInit(hpke, KEM, KDF, AEAD, NULL);
 
-	if (ret != 0)
-    	return ret;
-
-	rngRet = ret = wc_InitRng(rng);
-
-	if (ret != 0)
-    	return ret;
-
-	/* generate the keys */
 	if (ret == 0)
-    	ret = wc_HpkeGenerateKeyPair(hpke, (void **)&ephemeralKey, rng);
+		rngRet = ret = wc_InitRng(rng);
 
-	/* recieve reciever's pubkey*/
-	if (ret == 0){
-		if ((fd = open (PIPE_toSender, O_RDONLY)) == -1)
+	/* generate ephemeral keys */
+	if (ret == 0)
+		ret = wc_HpkeGenerateKeyPair(hpke, (void **)&ephemeralKey, rng);
+
+	/* recieve reciever's pubkey */
+	if (ret == 0)
+	{
+		if ((fd = open(PIPE_toSender, O_RDONLY)) == -1)
 			return fd;
+		read(fd, &pubKeySz, sizeof(word16));
 		read(fd, pubKey, pubKeySz);
 		close(fd);
+	}
+
+	/* load receiver's pubkey */
+	if (ret == 0)
+	{
 		ret = wc_HpkeDeserializePublicKey(hpke, (void **)&receiverKey, pubKey, pubKeySz);
+		scanf("%s", plaintext);
+		plaintextSz = XSTRLEN(plaintext);
 	}
 
 	/* seal */
 	if (ret == 0)
-    	ret = wc_HpkeSealBase(hpke, ephemeralKey, receiverKey,
-        	(byte*)info_text, (word32)XSTRLEN(info_text),
-        	(byte*)aad_text, (word32)XSTRLEN(aad_text),
-        	(byte*)plaintext, plaintextSz,
-        	ciphertext);
+		ret = wc_HpkeSealBase(hpke, ephemeralKey, receiverKey,
+							  (byte *)info_text, (word32)XSTRLEN(info_text),
+							  (byte *)aad_text, (word32)XSTRLEN(aad_text),
+							  (byte *)plaintext, plaintextSz,
+							  ciphertext);
 
-	/* export ephemeral key */
-	 if (ret == 0)
-    	ret = wc_HpkeSerializePublicKey(hpke, ephemeralKey, pubKey, &pubKeySz);
-	
-	/* send ephemeral key and message*/
-	if (ret == 0){
-		fd = open (PIPE_toReceiver, O_WRONLY);
-		if (fd == -1)
+	/* export ephemeral pubkey */
+	if (ret == 0)
+		ret = wc_HpkeSerializePublicKey(hpke, ephemeralKey, pubKey, &pubKeySz);
+
+	/* send ephemeral pubkey and message*/
+	if (ret == 0)
+	{
+		if ((fd = open(PIPE_toReceiver, O_WRONLY)) == -1)
 			return fd;
+		write(fd, &pubKeySz, sizeof(pubKeySz));
 		write(fd, pubKey, pubKeySz);
-		write(fd, ciphertext, sizeof(ciphertext));
 		write(fd, &plaintextSz, sizeof(plaintextSz));
+		write(fd, ciphertext, sizeof(ciphertext));
 		close(fd);
 	}
 
 	if (ephemeralKey != NULL)
-    	wc_HpkeFreeKey(hpke, DHKEM_X25519_HKDF_SHA256, ephemeralKey, NULL);
+		wc_HpkeFreeKey(hpke, KEM, ephemeralKey, NULL);
 
 	if (rngRet == 0)
-    	wc_FreeRng(rng);
+		wc_FreeRng(rng);
 
 	if (ret == 0)
-  		printf("SUCCESS");
+		printf("SUCCESS");
+
+	return ret;
 }

@@ -19,10 +19,9 @@ SRC=$(wildcard *.c)
 TARGETS=$(patsubst %.c, %, $(SRC))
 
 all: $(TARGETS)
-	rm -rf tmp
-	mkdir tmp
-	mkfifo tmp/toSender
-	mkfifo tmp/toReceiver
+	rm -f toSender toReceiver
+	mkfifo toSender
+	mkfifo toReceiver
 
 # build template
 %: %.c
@@ -30,6 +29,6 @@ all: $(TARGETS)
 
 clean:
 	rm -f $(TARGETS)
-	rm -f *.pub
-	rm -f *.enc
-	rm -rf tmp
+	rm -f *.pub *.enc
+	rm -rf *.dSYM
+	rm -f toSender toReceiver
